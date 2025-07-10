@@ -53,9 +53,10 @@
                     <label for="normality-test">Test Type:</label>
                     <select id="normality-test" class="form-control">
                         <option value="shapiro">Shapiro-Wilk Test</option>
-                        <option value="anderson">Anderson-Darling Test</option>
-                        <option value="kstest">Kolmogorov-Smirnov Test</option>
+                        <option value="anderson_darling">Anderson-Darling Test</option>
+                        <option value="kolmogorov_smirnov">Kolmogorov-Smirnov Test</option>
                         <option value="jarque_bera">Jarque-Bera Test</option>
+                        <option value="lilliefors">Lilliefors Test</option>
                     </select>
                 </div>
                 <button id="run-normality" class="btn btn-primary">Run Test</button>
@@ -102,7 +103,7 @@
                     <label for="ttest-type">Test Type:</label>
                     <select id="ttest-type" class="form-control">
                         <option value="one_sample">One Sample T-Test</option>
-                        <option value="independent">Independent T-Test</option>
+                        <option value="two_sample">Independent T-Test</option>
                         <option value="paired">Paired T-Test</option>
                     </select>
                 </div>
@@ -115,25 +116,23 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="test-value">Test Value:</label>
+                        <label for="test-value">Test Value (μ₀):</label>
                         <input type="number" id="test-value" class="form-control" step="any" placeholder="Enter test value">
                     </div>
                 </div>
 
-                <div id="ttest-independent" class="ttest-config" style="display: none;">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="ttest-column1">First Group Column:</label>
-                            <select id="ttest-column1" class="form-control">
-                                <option value="">Choose first column...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="ttest-column2">Second Group Column:</label>
-                            <select id="ttest-column2" class="form-control">
-                                <option value="">Choose second column...</option>
-                            </select>
-                        </div>
+                <div id="ttest-two-sample" class="ttest-config" style="display: none;">
+                    <div class="form-group">
+                        <label for="ttest-data-column">Data Column:</label>
+                        <select id="ttest-data-column" class="form-control">
+                            <option value="">Choose data column...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="ttest-group-column">Group Column:</label>
+                        <select id="ttest-group-column" class="form-control">
+                            <option value="">Choose group column...</option>
+                        </select>
                     </div>
                 </div>
 
@@ -179,11 +178,10 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="anova-independent">Independent Variable(s):</label>
-                    <select id="anova-independent" class="form-control" multiple>
-                        <!-- Groups will be populated here -->
+                    <label for="anova-independent">Independent Variable:</label>
+                    <select id="anova-independent" class="form-control">
+                        <option value="">Choose independent variable...</option>
                     </select>
-                    <small>Hold Ctrl/Cmd to select multiple variables</small>
                 </div>
                 <div class="form-group">
                     <label for="anova-type">ANOVA Type:</label>
@@ -239,6 +237,159 @@
                 <div id="chi-square-results" class="results-area"></div>
             </div>
         </div>
+
+        <!-- Non-Parametric Tests -->
+        <div class="stats-section">
+            <h3>Non-Parametric Tests</h3>
+            <div class="section-content">
+                <div class="form-group">
+                    <label for="nonparam-test-type">Test Type:</label>
+                    <select id="nonparam-test-type" class="form-control">
+                        <option value="mann_whitney">Mann-Whitney U Test</option>
+                        <option value="wilcoxon">Wilcoxon Signed-Rank Test</option>
+                        <option value="kruskal_wallis">Kruskal-Wallis Test</option>
+                        <option value="friedman">Friedman Test</option>
+                    </select>
+                </div>
+
+                <div id="mann-whitney-config" class="nonparam-config">
+                    <div class="form-group">
+                        <label for="mw-data-column">Data Column:</label>
+                        <select id="mw-data-column" class="form-control">
+                            <option value="">Choose data column...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="mw-group-column">Group Column:</label>
+                        <select id="mw-group-column" class="form-control">
+                            <option value="">Choose group column...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="wilcoxon-config" class="nonparam-config" style="display: none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="wilcoxon-col1">First Column:</label>
+                            <select id="wilcoxon-col1" class="form-control">
+                                <option value="">Choose first column...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="wilcoxon-col2">Second Column:</label>
+                            <select id="wilcoxon-col2" class="form-control">
+                                <option value="">Choose second column...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="kruskal-config" class="nonparam-config" style="display: none;">
+                    <div class="form-group">
+                        <label for="kw-dependent">Dependent Variable:</label>
+                        <select id="kw-dependent" class="form-control">
+                            <option value="">Choose dependent variable...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="kw-independent">Independent Variable:</label>
+                        <select id="kw-independent" class="form-control">
+                            <option value="">Choose independent variable...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="friedman-config" class="nonparam-config" style="display: none;">
+                    <div class="form-group">
+                        <label for="friedman-columns">Select Columns:</label>
+                        <select id="friedman-columns" class="form-control" multiple>
+                            <!-- Columns will be populated here -->
+                        </select>
+                        <small>Hold Ctrl/Cmd to select multiple columns (minimum 3)</small>
+                    </div>
+                </div>
+
+                <button id="run-nonparametric" class="btn btn-primary">Run Test</button>
+                <div id="nonparametric-results" class="results-area"></div>
+            </div>
+        </div>
+
+        <!-- Variance Tests -->
+        <div class="stats-section">
+            <h3>Variance Tests</h3>
+            <div class="section-content">
+                <div class="form-group">
+                    <label for="variance-test-type">Test Type:</label>
+                    <select id="variance-test-type" class="form-control">
+                        <option value="levene">Levene's Test</option>
+                        <option value="bartlett">Bartlett's Test</option>
+                        <option value="fligner">Fligner-Killeen Test</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="variance-columns">Select Columns:</label>
+                    <select id="variance-columns" class="form-control" multiple>
+                        <!-- Columns will be populated here -->
+                    </select>
+                    <small>Hold Ctrl/Cmd to select multiple columns (minimum 2)</small>
+                </div>
+                <button id="run-variance-test" class="btn btn-primary">Run Variance Test</button>
+                <div id="variance-results" class="results-area"></div>
+            </div>
+        </div>
+
+        <!-- McNemar Test -->
+        <div class="stats-section">
+            <h3>McNemar Test</h3>
+            <div class="section-content">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="mcnemar-col1">First Column:</label>
+                        <select id="mcnemar-col1" class="form-control">
+                            <option value="">Choose first column...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="mcnemar-col2">Second Column:</label>
+                        <select id="mcnemar-col2" class="form-control">
+                            <option value="">Choose second column...</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="run-mcnemar" class="btn btn-primary">Run McNemar Test</button>
+                <div id="mcnemar-results" class="results-area"></div>
+            </div>
+        </div>
+
+        <!-- Multiple Comparisons -->
+        <div class="stats-section">
+            <h3>Multiple Comparisons</h3>
+            <div class="section-content">
+                <div class="form-group">
+                    <label for="mc-dependent">Dependent Variable:</label>
+                    <select id="mc-dependent" class="form-control">
+                        <option value="">Choose dependent variable...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="mc-independent">Independent Variable:</label>
+                    <select id="mc-independent" class="form-control">
+                        <option value="">Choose independent variable...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="mc-method">Method:</label>
+                    <select id="mc-method" class="form-control">
+                        <option value="tukey">Tukey HSD</option>
+                        <option value="bonferroni">Bonferroni</option>
+                        <option value="holm">Holm-Bonferroni</option>
+                    </select>
+                </div>
+                <button id="run-multiple-comparison" class="btn btn-primary">Run Multiple Comparison</button>
+                <div id="multiple-comparison-results" class="results-area"></div>
+            </div>
+        </div>
+
     </div>
 </div>
 

@@ -991,3 +991,158 @@ body.dark-theme .comp-tab-button.active {
     background: #1e293b;
     color: #60a5fa;
 }
+
+/* Statistical Test Result Styling */
+.test-result {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 15px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid #e2e8f0;
+}
+
+.test-result.significant {
+    border-left-color: #10b981;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, transparent 100%);
+}
+
+.test-result.not-significant {
+    border-left-color: #f59e0b;
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.05) 0%, transparent 100%);
+}
+
+.test-result.normal {
+    border-left-color: #3b82f6;
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);
+}
+
+.test-result.not-normal {
+    border-left-color: #ef4444;
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%);
+}
+
+.test-result h4 {
+    margin: 0 0 15px 0;
+    color: #1e293b;
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+.result-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin: 15px 0;
+}
+
+.stat-item {
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.stat-item strong {
+    display: block;
+    color: #64748b;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.conclusion {
+    background: #f1f5f9;
+    padding: 15px;
+    border-radius: 6px;
+    margin-top: 15px;
+    font-size: 0.95em;
+    line-height: 1.5;
+}
+
+/* Test Configuration Sections */
+.ttest-config,
+.nonparam-config,
+.chi-config {
+    margin: 15px 0;
+    padding: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+/* Comparisons Table */
+.comparisons-table {
+    margin: 15px 0;
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.comparisons-table .stats-table {
+    margin: 0;
+    width: 100%;
+}
+
+.comparisons-table .stats-table th {
+    background: #f1f5f9;
+    font-weight: 600;
+    color: #374151;
+}
+
+.comparisons-table .stats-table td {
+    text-align: center;
+}
+
+/* Dark theme for statistical results */
+body.dark-theme .test-result {
+    background-color: #2c3e50;
+    border-left-color: #5a6c7d;
+    color: #ecf0f1;
+}
+
+body.dark-theme .test-result.significant {
+    border-left-color: #00d084;
+    background: linear-gradient(90deg, rgba(0, 208, 132, 0.1) 0%, transparent 100%);
+}
+
+body.dark-theme .test-result.not-significant {
+    border-left-color: #f39c12;
+    background: linear-gradient(90deg, rgba(243, 156, 18, 0.1) 0%, transparent 100%);
+}
+
+body.dark-theme .test-result h4 {
+    color: #ecf0f1;
+}
+
+body.dark-theme .stat-item {
+    background-color: #34495e;
+    border-color: #5a6c7d;
+    color: #ecf0f1;
+}
+
+body.dark-theme .stat-item strong {
+    color: #bdc3c7;
+}
+
+body.dark-theme .conclusion {
+    background-color: #34495e;
+    color: #ecf0f1;
+}
+
+body.dark-theme .ttest-config,
+body.dark-theme .nonparam-config,
+body.dark-theme .chi-config {
+    background-color: #2c3e50;
+    border-color: #5a6c7d;
+}
+
+body.dark-theme .comparisons-table {
+    border-color: #5a6c7d;
+}
+
+body.dark-theme .comparisons-table .stats-table th {
+    background-color: #34495e;
+    color: #ecf0f1;
+}

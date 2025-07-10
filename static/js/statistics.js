@@ -37,6 +37,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Chi-square tests
         document.getElementById('chi-test-type').addEventListener('change', handleChiTestTypeChange);
         document.getElementById('run-chi-square').addEventListener('click', runChiSquareTest);
+        
+        // Non-parametric tests
+        document.getElementById('nonparam-test-type').addEventListener('change', handleNonParametricTypeChange);
+        document.getElementById('run-nonparametric').addEventListener('click', runNonParametricTest);
+        
+        // Variance tests
+        document.getElementById('run-variance-test').addEventListener('click', runVarianceTest);
+        
+        // McNemar test
+        document.getElementById('run-mcnemar').addEventListener('click', runMcNemarTest);
+        
+        // Multiple comparisons
+        document.getElementById('run-multiple-comparison').addEventListener('click', runMultipleComparison);
     }
     
     // Functions
@@ -117,8 +130,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get all select elements that need column population
         const selects = [
             'desc-columns', 'normality-column', 'corr-column1', 'corr-column2',
-            'ttest-column', 'ttest-column1', 'ttest-column2', 'ttest-before', 'ttest-after',
-            'anova-dependent', 'anova-independent', 'chi-var1', 'chi-var2', 'chi-observed'
+            'ttest-column', 'ttest-data-column', 'ttest-group-column', 'ttest-before', 'ttest-after',
+            'anova-dependent', 'anova-independent', 'chi-var1', 'chi-var2', 'chi-observed',
+            'mw-data-column', 'mw-group-column', 'wilcoxon-col1', 'wilcoxon-col2',
+            'kw-dependent', 'kw-independent', 'friedman-columns', 'variance-columns',
+            'mcnemar-col1', 'mcnemar-col2', 'mc-dependent', 'mc-independent'
         ];
         
         selects.forEach(selectId => {
@@ -138,8 +154,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     let shouldInclude = true;
                     
                     if (selectId.includes('normality') || selectId.includes('corr') || 
-                        selectId.includes('ttest') || selectId.includes('anova-dependent')) {
+                        selectId.includes('ttest') || selectId.includes('anova-dependent') ||
+                        selectId.includes('mw-data') || selectId.includes('wilcoxon') ||
+                        selectId.includes('kw-dependent') || selectId.includes('friedman') ||
+                        selectId.includes('variance') || selectId.includes('mc-dependent')) {
                         shouldInclude = column.is_numeric;
+                    }
+                    
+                    if (selectId.includes('group') || selectId.includes('anova-independent') ||
+                        selectId.includes('kw-independent') || selectId.includes('mc-independent') ||
+                        selectId.includes('chi') || selectId.includes('mcnemar')) {
+                        shouldInclude = !column.is_numeric; // Categorical columns
                     }
                     
                     if (shouldInclude) {
@@ -408,7 +433,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show relevant section
         const sectionMap = {
             'one_sample': 'ttest-one-sample',
-            'independent': 'ttest-independent', 
+            'two_sample': 'ttest-two-sample', 
             'paired': 'ttest-paired'
         };
         
@@ -431,13 +456,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (testType === 'one_sample') {
             requestData.column = document.getElementById('ttest-column').value;
-            requestData.population_mean = parseFloat(document.getElementById('population-mean').value);
-        } else if (testType === 'independent') {
-            requestData.column1 = document.getElementById('ttest-column1').value;
-            requestData.column2 = document.getElementById('ttest-column2').value;
+            requestData.mu = parseFloat(document.getElementById('test-value').value);
+        } else if (testType === 'two_sample') {
+            requestData.column = document.getElementById('ttest-data-column').value;
+            requestData.group_column = document.getElementById('ttest-group-column').value;
         } else if (testType === 'paired') {
-            requestData.before_column = document.getElementById('ttest-before').value;
-            requestData.after_column = document.getElementById('ttest-after').value;
+            requestData.column1 = document.getElementById('ttest-before').value;
+            requestData.column2 = document.getElementById('ttest-after').value;
         }
         
         showLoading('Running T-test...');
@@ -676,6 +701,370 @@ document.addEventListener('DOMContentLoaded', function() {
         container.innerHTML = html;
     }
     
+    // Non-parametric test handlers
+    function handleNonParametricTypeChange() {
+        const testType = document.getElementById('nonparam-test-type').value;
+        
+        // Hide all config sections
+        document.querySelectorAll('.nonparam-config').forEach(section => {
+            section.style.display = 'none';
+        });
+        
+        // Show relevant section
+        const sectionMap = {
+            'mann_whitney': 'mann-whitney-config',
+            'wilcoxon': 'wilcoxon-config',
+            'kruskal_wallis': 'kruskal-config',
+            'friedman': 'friedman-config'
+        };
+        
+        const sectionId = sectionMap[testType];
+        if (sectionId) {
+            document.getElementById(sectionId).style.display = 'block';
+        }
+    }
+
+    async function runNonParametricTest() {
+        const testType = document.getElementById('nonparam-test-type').value;
+        
+        let endpoint = '/api/statistical/';
+        let requestData = { dataset_id: currentDatasetId };
+        
+        // Get test-specific parameters and set endpoint
+        if (testType === 'mann_whitney') {
+            endpoint += 'mann_whitney';
+            requestData.column = document.getElementById('mw-data-column').value;
+            requestData.group_column = document.getElementById('mw-group-column').value;
+        } else if (testType === 'wilcoxon') {
+            endpoint += 'wilcoxon';
+            requestData.column1 = document.getElementById('wilcoxon-col1').value;
+            requestData.column2 = document.getElementById('wilcoxon-col2').value;
+        } else if (testType === 'kruskal_wallis') {
+            endpoint += 'kruskal_wallis';
+            requestData.dependent_var = document.getElementById('kw-dependent').value;
+            requestData.independent_var = document.getElementById('kw-independent').value;
+        } else if (testType === 'friedman') {
+            endpoint += 'friedman';
+            const selectedColumns = Array.from(document.getElementById('friedman-columns').selectedOptions)
+                .map(option => option.value);
+            requestData.columns = selectedColumns;
+        }
+        
+        showLoading('Running non-parametric test...');
+        
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.results) {
+                displayNonParametricResult(data.results, testType);
+            } else {
+                throw new Error(data.error || 'Failed to run non-parametric test');
+            }
+            
+        } catch (error) {
+            console.error('Error running non-parametric test:', error);
+            showError('Failed to run non-parametric test: ' + error.message);
+        } finally {
+            hideLoading();
+        }
+    }
+
+    function displayNonParametricResult(result, testType) {
+        const container = document.getElementById('nonparametric-results');
+        
+        const isSignificant = result.p_value < 0.05;
+        const testName = testType.replace('_', ' ').toUpperCase() + ' Test';
+        
+        let html = `
+            <div class="test-result ${isSignificant ? 'significant' : 'not-significant'}">
+                <h4>${testName} Results</h4>
+                <div class="result-stats">
+                    <div class="stat-item">
+                        <strong>Test Statistic:</strong> ${(result.test_statistic || result.statistic || result.h_statistic || result.u_statistic || result.chi2_statistic).toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>P-value:</strong> ${result.p_value.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Sample Size:</strong> ${result.sample_size || result.group1_size + result.group2_size || 'N/A'}
+                    </div>
+                    ${result.effect_size ? `
+                    <div class="stat-item">
+                        <strong>Effect Size:</strong> ${result.effect_size.toFixed(4)}
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="conclusion">
+                    <strong>Conclusion:</strong> ${result.interpretation || 
+                        (isSignificant ? 
+                            'Result is statistically significant (p < 0.05)' : 
+                            'Result is not statistically significant (p ≥ 0.05)')}
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+
+    async function runVarianceTest() {
+        const testType = document.getElementById('variance-test-type').value;
+        const selectedColumns = Array.from(document.getElementById('variance-columns').selectedOptions)
+            .map(option => option.value);
+        
+        if (selectedColumns.length < 2) {
+            showError('Please select at least 2 columns');
+            return;
+        }
+        
+        showLoading('Running variance test...');
+        
+        try {
+            const response = await fetch('/api/statistical/variance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    dataset_id: currentDatasetId,
+                    columns: selectedColumns,
+                    test_type: testType
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.results) {
+                displayVarianceResult(data.results, testType);
+            } else {
+                throw new Error(data.error || 'Failed to run variance test');
+            }
+            
+        } catch (error) {
+            console.error('Error running variance test:', error);
+            showError('Failed to run variance test: ' + error.message);
+        } finally {
+            hideLoading();
+        }
+    }
+
+    function displayVarianceResult(result, testType) {
+        const container = document.getElementById('variance-results');
+        
+        const isSignificant = result.p_value < 0.05;
+        const testName = testType.toUpperCase() + ' Test';
+        
+        const html = `
+            <div class="test-result ${isSignificant ? 'significant' : 'not-significant'}">
+                <h4>${testName} Results</h4>
+                <div class="result-stats">
+                    <div class="stat-item">
+                        <strong>Test Statistic:</strong> ${result.test_statistic.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>P-value:</strong> ${result.p_value.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Degrees of Freedom:</strong> ${result.degrees_of_freedom || 'N/A'}
+                    </div>
+                </div>
+                <div class="conclusion">
+                    <strong>Conclusion:</strong> ${result.interpretation || 
+                        (isSignificant ? 
+                            'Variances are significantly different' : 
+                            'Variances are not significantly different')}
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+
+    async function runMcNemarTest() {
+        const column1 = document.getElementById('mcnemar-col1').value;
+        const column2 = document.getElementById('mcnemar-col2').value;
+        
+        if (!column1 || !column2) {
+            showError('Please select both columns');
+            return;
+        }
+        
+        showLoading('Running McNemar test...');
+        
+        try {
+            const response = await fetch('/api/statistical/mcnemar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    dataset_id: currentDatasetId,
+                    column1: column1,
+                    column2: column2
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.results) {
+                displayMcNemarResult(data.results, column1, column2);
+            } else {
+                throw new Error(data.error || 'Failed to run McNemar test');
+            }
+            
+        } catch (error) {
+            console.error('Error running McNemar test:', error);
+            showError('Failed to run McNemar test: ' + error.message);
+        } finally {
+            hideLoading();
+        }
+    }
+
+    function displayMcNemarResult(result, column1, column2) {
+        const container = document.getElementById('mcnemar-results');
+        
+        const isSignificant = result.p_value < 0.05;
+        
+        const html = `
+            <div class="test-result ${isSignificant ? 'significant' : 'not-significant'}">
+                <h4>McNemar Test Results: "${column1}" vs "${column2}"</h4>
+                <div class="result-stats">
+                    <div class="stat-item">
+                        <strong>Test Statistic:</strong> ${result.test_statistic.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>P-value:</strong> ${result.p_value.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Test Type:</strong> ${result.test_type}
+                    </div>
+                </div>
+                <div class="conclusion">
+                    <strong>Conclusion:</strong> ${result.interpretation || 
+                        (isSignificant ? 
+                            'Marginal probabilities are significantly different' : 
+                            'Marginal probabilities are not significantly different')}
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+
+    async function runMultipleComparison() {
+        const dependent = document.getElementById('mc-dependent').value;
+        const independent = document.getElementById('mc-independent').value;
+        const method = document.getElementById('mc-method').value;
+        
+        if (!dependent || !independent) {
+            showError('Please select both dependent and independent variables');
+            return;
+        }
+        
+        showLoading('Running multiple comparison...');
+        
+        try {
+            const response = await fetch('/api/statistical/multiple_comparisons', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    dataset_id: currentDatasetId,
+                    dependent_var: dependent,
+                    independent_var: independent,
+                    method: method
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.results) {
+                displayMultipleComparisonResult(data.results, dependent, independent, method);
+            } else {
+                throw new Error(data.error || 'Failed to run multiple comparison');
+            }
+            
+        } catch (error) {
+            console.error('Error running multiple comparison:', error);
+            showError('Failed to run multiple comparison: ' + error.message);
+        } finally {
+            hideLoading();
+        }
+    }
+
+    function displayMultipleComparisonResult(result, dependent, independent, method) {
+        const container = document.getElementById('multiple-comparison-results');
+        
+        const testName = method.toUpperCase() + ' Multiple Comparisons';
+        
+        let html = `
+            <div class="test-result">
+                <h4>${testName}: "${dependent}" by "${independent}"</h4>
+        `;
+        
+        if (result.group_comparisons) {
+            html += `
+                <div class="comparisons-table">
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>Group 1</th>
+                                <th>Group 2</th>
+                                <th>Mean Diff</th>
+                                <th>P-value</th>
+                                <th>Significant</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            result.group_comparisons.forEach(comp => {
+                html += `
+                    <tr>
+                        <td>${comp.group1}</td>
+                        <td>${comp.group2}</td>
+                        <td>${comp.mean_diff.toFixed(4)}</td>
+                        <td>${comp.p_value.toFixed(4)}</td>
+                        <td>${comp.reject ? 'Yes' : 'No'}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        html += `</div>`;
+        container.innerHTML = html;
+    }
+
     function showLoading(message = 'Loading...') {
         loadingModal.querySelector('.modal-content').textContent = message;
         loadingModal.style.display = 'flex';
@@ -692,4 +1081,5 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize t-test and chi-square sections
     handleTTestTypeChange();
     handleChiTestTypeChange();
+    handleNonParametricTypeChange();
 });

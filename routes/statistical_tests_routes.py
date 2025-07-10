@@ -130,16 +130,16 @@ def t_test():
         
         if test_type == 'one_sample':
             column = request.json.get('column')
-            population_mean = request.json.get('population_mean')
-            result = service.one_sample_ttest(dataset.file_path, column, population_mean)
-        elif test_type == 'independent':
+            mu = request.json.get('mu', 0)
+            result = service.ttest(dataset_id, column, 'one_sample', mu)
+        elif test_type == 'two_sample':
+            column = request.json.get('column')
+            group_column = request.json.get('group_column')
+            result = service.ttest(dataset_id, column, 'two_sample', group_column=group_column)
+        elif test_type == 'paired':
             column1 = request.json.get('column1')
             column2 = request.json.get('column2')
-            result = service.independent_ttest(dataset.file_path, column1, column2)
-        elif test_type == 'paired':
-            before_column = request.json.get('before_column')
-            after_column = request.json.get('after_column')
-            result = service.paired_ttest(dataset.file_path, before_column, after_column)
+            result = service.wilcoxon(dataset_id, column1, column2)  # Use wilcoxon for paired data
         else:
             return jsonify({'success': False, 'error': 'Invalid test type'}), 400
         
@@ -207,40 +207,30 @@ def chi_square_test():
         logging.error(f"Chi-square test error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@statistical_tests_bp.route('/variance/<int:dataset_id>', methods=['POST'])
-def test_equal_variance(dataset_id):
+@statistical_tests_bp.route('/variance', methods=['POST'])
+def test_equal_variance():
     try:
-        dataset = Dataset.query.get_or_404(dataset_id)
-        stats = StatisticalTests()
-        
+        dataset_id = request.json.get('dataset_id')
         columns = request.json.get('columns', [])
         test_type = request.json.get('test_type', 'levene')
         
-        if not columns:
-            return jsonify({'error': 'Columns parameter is required'}), 400
+        if not dataset_id or not columns:
+            return jsonify({'success': False, 'error': 'Dataset ID and columns are required'}), 400
         
-        results = stats.test_equal_variance(dataset.file_path, columns, test_type)
+        dataset = Dataset.query.get_or_404(dataset_id)
+        stats = StatisticalTests()
         
-        # Save analysis to database
-        analysis = Analysis(
-            dataset_id=dataset_id,
-            analysis_type='statistical_test',
-            analysis_name=f'Equal Variance Test ({test_type})',
-            parameters={'columns': columns, 'test_type': test_type},
-            results=results
-        )
-        db.session.add(analysis)
-        db.session.commit()
+        results = stats.variance_test(dataset_id, columns, test_type)
         
         return jsonify({
             'success': True,
-            'results': results,
-            'analysis_id': analysis.id
+            'results': results['results'] if results['success'] else None,
+            'error': results.get('error')
         })
         
     except Exception as e:
-        logging.error(f"Equal variance test error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        logging.error(f"Variance test error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @statistical_tests_bp.route('/nonparametric/<int:dataset_id>', methods=['POST'])
 def perform_nonparametric(dataset_id):
@@ -385,3 +375,142 @@ def list_statistical_tests(dataset_id):
     except Exception as e:
         logging.error(f"List statistical tests error: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+# Individual statistical test routes
+@statistical_tests_bp.route('/mann_whitney', methods=['POST'])
+def mann_whitney_test():
+    try:
+        dataset_id = request.json.get('dataset_id')
+        column = request.json.get('column')
+        group_column = request.json.get('group_column')
+        
+        if not dataset_id or not column or not group_column:
+            return jsonify({'success': False, 'error': 'Dataset ID, column, and group column are required'}), 400
+        
+        service = StatisticalTests()
+        result = service.mann_whitney(dataset_id, column, group_column)
+        
+        return jsonify({
+            'success': True,
+            'results': result['results'] if result['success'] else None,
+            'error': result.get('error')
+        })
+        
+    except Exception as e:
+        logging.error(f"Mann-Whitney test error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@statistical_tests_bp.route('/wilcoxon', methods=['POST'])
+def wilcoxon_test():
+    try:
+        dataset_id = request.json.get('dataset_id')
+        column1 = request.json.get('column1')
+        column2 = request.json.get('column2')
+        
+        if not dataset_id or not column1 or not column2:
+            return jsonify({'success': False, 'error': 'Dataset ID and both columns are required'}), 400
+        
+        service = StatisticalTests()
+        result = service.wilcoxon(dataset_id, column1, column2)
+        
+        return jsonify({
+            'success': True,
+            'results': result['results'] if result['success'] else None,
+            'error': result.get('error')
+        })
+        
+    except Exception as e:
+        logging.error(f"Wilcoxon test error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@statistical_tests_bp.route('/kruskal_wallis', methods=['POST'])
+def kruskal_wallis_test():
+    try:
+        dataset_id = request.json.get('dataset_id')
+        dependent_var = request.json.get('dependent_var')
+        independent_var = request.json.get('independent_var')
+        
+        if not dataset_id or not dependent_var or not independent_var:
+            return jsonify({'success': False, 'error': 'Dataset ID, dependent and independent variables are required'}), 400
+        
+        service = StatisticalTests()
+        result = service.kruskal_wallis(dataset_id, dependent_var, independent_var)
+        
+        return jsonify({
+            'success': True,
+            'results': result['results'] if result['success'] else None,
+            'error': result.get('error')
+        })
+        
+    except Exception as e:
+        logging.error(f"Kruskal-Wallis test error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@statistical_tests_bp.route('/friedman', methods=['POST'])
+def friedman_test():
+    try:
+        dataset_id = request.json.get('dataset_id')
+        columns = request.json.get('columns', [])
+        
+        if not dataset_id or not columns or len(columns) < 3:
+            return jsonify({'success': False, 'error': 'Dataset ID and at least 3 columns are required'}), 400
+        
+        service = StatisticalTests()
+        result = service.friedman(dataset_id, columns)
+        
+        return jsonify({
+            'success': True,
+            'results': result['results'] if result['success'] else None,
+            'error': result.get('error')
+        })
+        
+    except Exception as e:
+        logging.error(f"Friedman test error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@statistical_tests_bp.route('/mcnemar', methods=['POST'])
+def mcnemar_test():
+    try:
+        dataset_id = request.json.get('dataset_id')
+        column1 = request.json.get('column1')
+        column2 = request.json.get('column2')
+        
+        if not dataset_id or not column1 or not column2:
+            return jsonify({'success': False, 'error': 'Dataset ID and both columns are required'}), 400
+        
+        service = StatisticalTests()
+        result = service.mcnemar(dataset_id, column1, column2)
+        
+        return jsonify({
+            'success': True,
+            'results': result['results'] if result['success'] else None,
+            'error': result.get('error')
+        })
+        
+    except Exception as e:
+        logging.error(f"McNemar test error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@statistical_tests_bp.route('/multiple_comparisons', methods=['POST'])
+def multiple_comparisons_test():
+    try:
+        dataset_id = request.json.get('dataset_id')
+        dependent_var = request.json.get('dependent_var')
+        independent_var = request.json.get('independent_var')
+        method = request.json.get('method', 'tukey')
+        
+        if not dataset_id or not dependent_var or not independent_var:
+            return jsonify({'success': False, 'error': 'Dataset ID, dependent and independent variables are required'}), 400
+        
+        service = StatisticalTests()
+        result = service.multiple_comparison(dataset_id, dependent_var, independent_var, method)
+        
+        return jsonify({
+            'success': True,
+            'results': result['results'] if result['success'] else None,
+            'error': result.get('error')
+        })
+        
+    except Exception as e:
+        logging.error(f"Multiple comparisons test error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
