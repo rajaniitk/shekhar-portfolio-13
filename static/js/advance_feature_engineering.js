@@ -15,23 +15,47 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     
     function setupEventListeners() {
-        refreshButton.addEventListener('click', loadDatasets);
-        datasetSelect.addEventListener('change', handleDatasetSelection);
+        if (refreshButton) {
+            refreshButton.addEventListener('click', loadDatasets);
+        }
+        if (datasetSelect) {
+            datasetSelect.addEventListener('change', handleDatasetSelection);
+        }
         
-        // Engineering technique buttons
-        document.getElementById('apply-polynomial-features').addEventListener('click', applyPolynomialFeatures);
-        document.getElementById('apply-interaction-features').addEventListener('click', applyInteractionFeatures);
-        document.getElementById('apply-feature-selection').addEventListener('click', applyFeatureSelection);
-        document.getElementById('apply-dimensionality-reduction').addEventListener('click', applyDimensionalityReduction);
-        document.getElementById('apply-time-features').addEventListener('click', applyTimeFeatures);
-        document.getElementById('apply-text-features').addEventListener('click', applyTextFeatures);
-        document.getElementById('apply-clustering-features').addEventListener('click', applyClusteringFeatures);
-        document.getElementById('apply-custom-transformations').addEventListener('click', applyCustomTransformations);
+        // Engineering technique buttons with null checks
+        const polyBtn = document.getElementById('apply-polynomial-features');
+        if (polyBtn) polyBtn.addEventListener('click', applyPolynomialFeatures);
+        
+        const interactionBtn = document.getElementById('apply-interaction-features');
+        if (interactionBtn) interactionBtn.addEventListener('click', applyInteractionFeatures);
+        
+        const selectionBtn = document.getElementById('apply-feature-selection');
+        if (selectionBtn) selectionBtn.addEventListener('click', applyFeatureSelection);
+        
+        const reductionBtn = document.getElementById('apply-dimensionality-reduction');
+        if (reductionBtn) reductionBtn.addEventListener('click', applyDimensionalityReduction);
+        
+        const timeBtn = document.getElementById('apply-time-features');
+        if (timeBtn) timeBtn.addEventListener('click', applyTimeFeatures);
+        
+        const textBtn = document.getElementById('apply-text-features');
+        if (textBtn) textBtn.addEventListener('click', applyTextFeatures);
+        
+        const clusterBtn = document.getElementById('apply-clustering-features');
+        if (clusterBtn) clusterBtn.addEventListener('click', applyClusteringFeatures);
+        
+        const customBtn = document.getElementById('apply-custom-transformations');
+        if (customBtn) customBtn.addEventListener('click', applyCustomTransformations);
         
         // Feature management buttons
-        document.getElementById('save-features').addEventListener('click', saveFeatures);
-        document.getElementById('export-features').addEventListener('click', exportFeatures);
-        document.getElementById('reset-features').addEventListener('click', resetFeatures);
+        const saveBtn = document.getElementById('save-features');
+        if (saveBtn) saveBtn.addEventListener('click', saveFeatures);
+        
+        const exportBtn = document.getElementById('export-features');
+        if (exportBtn) exportBtn.addEventListener('click', exportFeatures);
+        
+        const resetBtn = document.getElementById('reset-features');
+        if (resetBtn) resetBtn.addEventListener('click', resetFeatures);
         
         // Tab switching for sub-techniques
         const tabButtons = document.querySelectorAll('.subtab-button');

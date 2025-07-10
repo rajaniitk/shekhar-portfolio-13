@@ -620,83 +620,296 @@
 .stats-table, .results-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 15px;
-    background: white;
+    margin: 20px 0;
+    background-color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .stats-table th, .results-table th {
-    background: #f8fafc;
-    padding: 15px;
+    background-color: #3498db;
+    color: white;
+    padding: 12px;
     text-align: left;
     font-weight: 600;
-    color: #374151;
-    border-bottom: 1px solid #e5e7eb;
 }
 
 .stats-table td, .results-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #f3f4f6;
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
 }
 
 .stats-table tr:hover, .results-table tr:hover {
-    background: #f8fafc;
+    background-color: #f8f9fa;
 }
 
-/* Responsive Design */
+/* Correlation Table Styles */
+.correlation-table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin: 20px 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.correlation-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    min-width: 600px;
+}
+
+.correlation-table th {
+    background-color: #2c3e50;
+    color: white;
+    padding: 12px 8px;
+    text-align: center;
+    font-weight: 600;
+    border: 1px solid #34495e;
+    min-width: 80px;
+    word-wrap: break-word;
+}
+
+.correlation-table td {
+    padding: 8px;
+    text-align: center;
+    border: 1px solid #ddd;
+    min-width: 80px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+}
+
+.correlation-table .corr-cell {
+    position: relative;
+    font-weight: bold;
+}
+
+.correlation-table .corr-cell.positive {
+    background-color: rgba(52, 152, 219, 0.1);
+    color: #2980b9;
+}
+
+.correlation-table .corr-cell.negative {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: #c0392b;
+}
+
+.correlation-table .corr-cell:hover {
+    background-color: rgba(241, 196, 15, 0.3) !important;
+    cursor: pointer;
+}
+
+/* Stats Table Container */
+.stats-table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin: 20px 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stats-table-container h4 {
+    margin: 20px 0 10px 0;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* Enhanced table styling for better readability */
+.stats-table th:first-child,
+.correlation-table th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background-color: #2c3e50 !important;
+}
+
+.stats-table td:first-child,
+.correlation-table td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: #f8f9fa;
+    font-weight: bold;
+    z-index: 5;
+}
+
+/* Responsive improvements */
 @media (max-width: 768px) {
-    .dashboard-header h2 {
-        font-size: 1.8em;
+    .correlation-table-container,
+    .stats-table-container {
+        margin: 10px -20px;
+        border-radius: 0;
     }
     
-    .dashboard-header p {
-        font-size: 1em;
+    .correlation-table th,
+    .correlation-table td {
+        min-width: 60px;
+        padding: 6px 4px;
+        font-size: 11px;
     }
     
-    .dataset-selector {
-        flex-direction: column;
-        align-items: stretch;
+    .stats-table th,
+    .stats-table td {
+        padding: 8px 6px;
+        font-size: 12px;
     }
-    
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .info-cards, .overview-cards, .summary-cards, .metrics-cards, .result-cards {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 15px;
-    }
-    
-    .section-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .tab-buttons, .comparison-tabs {
-        flex-direction: column;
-    }
-    
-    .button-group, .cta-buttons, .action-buttons {
-        flex-direction: column;
-    }
-    
-    .type-buttons {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .dataset-selectors, .column-selectors, .segment-selectors {
-        grid-template-columns: 1fr;
-    }
-    
-    .checkbox-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .charts-grid, .models-grid, .reports-grid {
-        grid-template-columns: 1fr;
-    }
+}
+
+/* Missing values visualization */
+.missing-chart {
+    width: 100%;
+    margin: 20px 0;
+}
+
+.missing-item {
+    margin-bottom: 10px;
+    background: #fff;
+    border-radius: 6px;
+    padding: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.missing-label {
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #2c3e50;
+}
+
+.missing-bar-container {
+    position: relative;
+    background-color: #ecf0f1;
+    height: 24px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.missing-bar {
+    height: 100%;
+    border-radius: 12px;
+    position: relative;
+    transition: width 0.3s ease;
+}
+
+.missing-bar.low {
+    background-color: #27ae60;
+}
+
+.missing-bar.medium {
+    background-color: #f39c12;
+}
+
+.missing-bar.high {
+    background-color: #e74c3c;
+}
+
+.missing-text {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    font-size: 12px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+/* Data types visualization */
+.types-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.type-item {
+    background: #fff;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 4px solid #3498db;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.type-item.numeric {
+    border-left-color: #27ae60;
+}
+
+.type-item.categorical {
+    border-left-color: #e74c3c;
+}
+
+.type-item.datetime {
+    border-left-color: #9b59b6;
+}
+
+.type-item.boolean {
+    border-left-color: #f39c12;
+}
+
+.type-badge {
+    background: #ecf0f1;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+}
+
+/* Dashboard header improvements */
+.dashboard-header h2 {
+    color: #2c3e50;
+    margin-bottom: 8px;
+}
+
+.dashboard-header p {
+    color: #7f8c8d;
+    margin-bottom: 0;
+}
+
+/* Dark theme adjustments */
+body.dark-theme .stats-table,
+body.dark-theme .correlation-table {
+    background-color: #2c3e50;
+    color: #ecf0f1;
+}
+
+body.dark-theme .stats-table th,
+body.dark-theme .correlation-table th {
+    background-color: #34495e;
+}
+
+body.dark-theme .stats-table td,
+body.dark-theme .correlation-table td {
+    border-bottom-color: #34495e;
+}
+
+body.dark-theme .stats-table tr:hover,
+body.dark-theme .correlation-table tr:hover {
+    background-color: #34495e;
+}
+
+body.dark-theme .correlation-table .corr-cell.positive {
+    background-color: rgba(52, 152, 219, 0.2);
+    color: #5dade2;
+}
+
+body.dark-theme .correlation-table .corr-cell.negative {
+    background-color: rgba(231, 76, 60, 0.2);
+    color: #ec7063;
+}
+
+body.dark-theme .missing-item,
+body.dark-theme .type-item {
+    background-color: #34495e;
+    color: #ecf0f1;
+}
+
+body.dark-theme .dashboard-header h2 {
+    color: #ecf0f1;
+}
+
+body.dark-theme .dashboard-header p {
+    color: #bdc3c7;
 }
 
 /* Additional Utility Classes */

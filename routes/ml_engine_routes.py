@@ -58,13 +58,11 @@ def train_model_new():
         engine = MLEngine()
         
         result = engine.train_model(
-            dataset.file_path, 
-            features, 
-            target, 
-            problem_type, 
+            dataset_id, 
             algorithm, 
-            hyperparameters,
-            test_size=test_size
+            target, 
+            features, 
+            hyperparameters
         )
         
         if result['success']:

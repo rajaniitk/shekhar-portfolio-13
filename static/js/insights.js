@@ -19,25 +19,48 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     
     function setupEventListeners() {
-        refreshButton.addEventListener('click', loadDatasets);
-        datasetSelect.addEventListener('change', handleDatasetSelection);
+        if (refreshButton) {
+            refreshButton.addEventListener('click', loadDatasets);
+        }
+        if (datasetSelect) {
+            datasetSelect.addEventListener('change', handleDatasetSelection);
+        }
         
-        // Generate insights buttons
-        document.getElementById('generate-all-insights').addEventListener('click', generateAllInsights);
-        document.getElementById('generate-statistical-insights').addEventListener('click', () => generateInsightsByCategory('statistical'));
-        document.getElementById('generate-pattern-insights').addEventListener('click', () => generateInsightsByCategory('patterns'));
-        document.getElementById('generate-quality-insights').addEventListener('click', () => generateInsightsByCategory('quality'));
-        document.getElementById('generate-business-insights').addEventListener('click', () => generateInsightsByCategory('business'));
+        // Generate insights buttons with null checks
+        const generateAllBtn = document.getElementById('generate-all-insights');
+        if (generateAllBtn) generateAllBtn.addEventListener('click', generateAllInsights);
         
-        // Filter controls
-        document.getElementById('filter-category').addEventListener('change', updateInsightFilters);
-        document.getElementById('filter-priority').addEventListener('change', updateInsightFilters);
-        document.getElementById('filter-confidence').addEventListener('change', updateInsightFilters);
+        const generateStatBtn = document.getElementById('generate-statistical-insights');
+        if (generateStatBtn) generateStatBtn.addEventListener('click', () => generateInsightsByCategory('statistical'));
         
-        // Action buttons
-        document.getElementById('export-insights').addEventListener('click', exportInsights);
-        document.getElementById('clear-insights').addEventListener('click', clearInsights);
-        document.getElementById('refresh-insights').addEventListener('click', refreshInsights);
+        const generatePatternBtn = document.getElementById('generate-pattern-insights');
+        if (generatePatternBtn) generatePatternBtn.addEventListener('click', () => generateInsightsByCategory('patterns'));
+        
+        const generateQualityBtn = document.getElementById('generate-quality-insights');
+        if (generateQualityBtn) generateQualityBtn.addEventListener('click', () => generateInsightsByCategory('quality'));
+        
+        const generateBusinessBtn = document.getElementById('generate-business-insights');
+        if (generateBusinessBtn) generateBusinessBtn.addEventListener('click', () => generateInsightsByCategory('business'));
+        
+        // Filter controls with null checks
+        const categoryFilter = document.getElementById('filter-category');
+        if (categoryFilter) categoryFilter.addEventListener('change', updateInsightFilters);
+        
+        const priorityFilter = document.getElementById('filter-priority');
+        if (priorityFilter) priorityFilter.addEventListener('change', updateInsightFilters);
+        
+        const confidenceFilter = document.getElementById('filter-confidence');
+        if (confidenceFilter) confidenceFilter.addEventListener('change', updateInsightFilters);
+        
+        // Action buttons with null checks
+        const exportBtn = document.getElementById('export-insights');
+        if (exportBtn) exportBtn.addEventListener('click', exportInsights);
+        
+        const clearBtn = document.getElementById('clear-insights');
+        if (clearBtn) clearBtn.addEventListener('click', clearInsights);
+        
+        const refreshBtn = document.getElementById('refresh-insights');
+        if (refreshBtn) refreshBtn.addEventListener('click', refreshInsights);
         
         // Insight management
         setupInsightActions();

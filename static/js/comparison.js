@@ -5,9 +5,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let comparisonData = {};
     
     // DOM Elements
-    const datasetSelector = document.getElementById('dataset-selector');
-    const columnSelector = document.getElementById('column-selector');
-    const comparisonType = document.getElementById('comparison-type');
+    const dataset1Select = document.getElementById('dataset1-select');
+    const dataset2Select = document.getElementById('dataset2-select');
+    const colDatasetSelect = document.getElementById('col-dataset-select');
     const comparisonResults = document.getElementById('comparison-results');
     const loadingModal = document.getElementById('comparison-loading-modal');
     
@@ -16,20 +16,48 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     
     function setupEventListeners() {
-        document.getElementById('refresh-comparison-datasets').addEventListener('click', loadDatasets);
-        document.getElementById('compare-datasets').addEventListener('click', compareDatasets);
-        document.getElementById('compare-columns').addEventListener('click', compareColumns);
-        document.getElementById('export-comparison').addEventListener('click', exportComparison);
+        // Dataset comparison event listeners
+        const compareBtn = document.getElementById('compare-datasets');
+        if (compareBtn) {
+            compareBtn.addEventListener('click', compareDatasets);
+        }
         
-        comparisonType.addEventListener('change', handleComparisonTypeChange);
+        const compareColBtn = document.getElementById('compare-columns');
+        if (compareColBtn) {
+            compareColBtn.addEventListener('click', compareColumns);
+        }
+        
+        const exportBtn = document.getElementById('export-comparison');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', exportComparison);
+        }
+        
+        // Type switching buttons
+        const typeButtons = document.querySelectorAll('.type-btn');
+        typeButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                switchComparisonType(e.target.getAttribute('data-type'));
+            });
+        });
         
         // Tab switching
-        const tabButtons = document.querySelectorAll('.comparison-tab');
+        const tabButtons = document.querySelectorAll('.comp-tab-button');
         tabButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 switchTab(e.target.getAttribute('data-tab'));
             });
         });
+        
+        // Dataset selectors
+        if (dataset1Select) {
+            dataset1Select.addEventListener('change', updateComparisonOptions);
+        }
+        if (dataset2Select) {
+            dataset2Select.addEventListener('change', updateComparisonOptions);
+        }
+        if (colDatasetSelect) {
+            colDatasetSelect.addEventListener('change', updateColumnOptions);
+        }
     }
     
     async function loadDatasets() {
@@ -69,9 +97,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }));
                 
+                storeDatasets(datasetsWithColumns);
                 populateDatasetSelectors(datasetsWithColumns);
             } else {
                 console.log('No datasets available');
+                storeDatasets([]);
                 populateDatasetSelectors([]);
             }
             
@@ -82,104 +112,126 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function populateDatasetSelectors(datasets) {
-        const container = document.getElementById('dataset-list');
-        container.innerHTML = '';
+        // Populate dataset selectors for comparison
+        const selectors = [dataset1Select, dataset2Select, colDatasetSelect];
         
-        datasets.forEach(dataset => {
-            const checkbox = document.createElement('div');
-            checkbox.className = 'dataset-checkbox';
-            checkbox.innerHTML = `
-                <input type="checkbox" id="dataset_${dataset.id}" value="${dataset.id}">
-                <label for="dataset_${dataset.id}">
-                    <strong>${dataset.name}</strong>
-                    <span class="dataset-info">${dataset.rows.toLocaleString()} rows, ${dataset.columns} columns</span>
-                </label>
-            `;
-            container.appendChild(checkbox);
-            
-            // Add event listener for dataset selection
-            const checkbox_input = checkbox.querySelector('input[type="checkbox"]');
-            checkbox_input.addEventListener('change', updateSelectedDatasets);
+        selectors.forEach(selector => {
+            if (selector) {
+                selector.innerHTML = '<option value="">Choose dataset...</option>';
+                datasets.forEach(dataset => {
+                    const option = document.createElement('option');
+                    option.value = dataset.id;
+                    option.textContent = `${dataset.name} (${dataset.rows} rows, ${dataset.columns} cols)`;
+                    selector.appendChild(option);
+                });
+            }
         });
         
-        // Populate column comparison selectors
-        populateColumnSelectors(datasets);
-    }
-    
-    function populateColumnSelectors(datasets) {
-        const dataset1Select = document.getElementById('column-dataset-1');
-        const dataset2Select = document.getElementById('column-dataset-2');
-        
-        [dataset1Select, dataset2Select].forEach(select => {
-            select.innerHTML = '<option value="">Select dataset...</option>';
+        // Also populate segment dataset selector if it exists
+        const segDatasetSelect = document.getElementById('seg-dataset-select');
+        if (segDatasetSelect) {
+            segDatasetSelect.innerHTML = '<option value="">Choose dataset...</option>';
             datasets.forEach(dataset => {
                 const option = document.createElement('option');
                 option.value = dataset.id;
-                option.textContent = dataset.name;
-                select.appendChild(option);
+                option.textContent = `${dataset.name} (${dataset.rows} rows, ${dataset.columns} cols)`;
+                segDatasetSelect.appendChild(option);
             });
-        });
-        
-        // Add change listeners
-        dataset1Select.addEventListener('change', () => updateColumnOptions(1, datasets));
-        dataset2Select.addEventListener('change', () => updateColumnOptions(2, datasets));
+        }
     }
     
-    function updateColumnOptions(datasetNumber, datasets) {
-        const datasetSelect = document.getElementById(`column-dataset-${datasetNumber}`);
-        const columnSelect = document.getElementById(`column-select-${datasetNumber}`);
+
+    
+    function updateColumnOptions() {
+        const selectedDatasetId = colDatasetSelect.value;
+        const column1Select = document.getElementById('column1-select');
+        const column2Select = document.getElementById('column2-select');
         
-        const selectedDatasetId = datasetSelect.value;
-        
-        columnSelect.innerHTML = '<option value="">Select column...</option>';
+        if (column1Select) column1Select.innerHTML = '<option value="">Choose first column...</option>';
+        if (column2Select) column2Select.innerHTML = '<option value="">Choose second column...</option>';
         
         if (selectedDatasetId) {
-            const dataset = datasets.find(d => d.id == selectedDatasetId);
-            if (dataset) {
-                dataset.columns_list.forEach(column => {
-                    const option = document.createElement('option');
-                    option.value = column;
-                    option.textContent = column;
-                    columnSelect.appendChild(option);
+            // Fetch columns for the selected dataset
+            fetch(`/api/data/columns/${selectedDatasetId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.columns) {
+                        data.columns.forEach(column => {
+                            if (column1Select) {
+                                const option1 = document.createElement('option');
+                                option1.value = column.name;
+                                option1.textContent = column.name;
+                                column1Select.appendChild(option1);
+                            }
+                            if (column2Select) {
+                                const option2 = document.createElement('option');
+                                option2.value = column.name;
+                                option2.textContent = column.name;
+                                column2Select.appendChild(option2);
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading columns:', error);
                 });
-            }
         }
     }
     
-    function updateSelectedDatasets() {
-        const checkboxes = document.querySelectorAll('#dataset-list input[type="checkbox"]:checked');
-        selectedDatasets = Array.from(checkboxes).map(cb => cb.value);
-        
-        const compareButton = document.getElementById('compare-datasets');
-        compareButton.disabled = selectedDatasets.length < 2;
-        
-        if (selectedDatasets.length >= 2) {
-            compareButton.textContent = `Compare ${selectedDatasets.length} Datasets`;
-        } else {
-            compareButton.textContent = 'Select at least 2 datasets';
+    function updateComparisonOptions() {
+        // Enable/disable comparison button based on selection
+        const compareBtn = document.getElementById('compare-datasets');
+        if (compareBtn) {
+            compareBtn.disabled = !dataset1Select.value || !dataset2Select.value;
         }
     }
     
-    function handleComparisonTypeChange() {
-        const type = comparisonType.value;
+    function switchComparisonType(type) {
+        // Hide all panels
+        const panels = document.querySelectorAll('.comparison-panel');
+        panels.forEach(panel => panel.classList.remove('active'));
         
-        // Show/hide appropriate sections
-        document.getElementById('dataset-comparison').style.display = 
-            type === 'dataset' ? 'block' : 'none';
-        document.getElementById('column-comparison').style.display = 
-            type === 'column' ? 'block' : 'none';
+        // Show selected panel
+        const selectedPanel = document.getElementById(`${type}-comparison-panel`);
+        if (selectedPanel) {
+            selectedPanel.classList.add('active');
+        }
+        
+        // Update button states
+        const buttons = document.querySelectorAll('.type-btn');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        
+        const activeButton = document.querySelector(`[data-type="${type}"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
+        }
+    }
+    
+    function getStoredDatasets() {
+        // Simple function to store datasets temporarily
+        if (!window.cachedDatasets) {
+            window.cachedDatasets = [];
+        }
+        return window.cachedDatasets;
+    }
+    
+    function storeDatasets(datasets) {
+        window.cachedDatasets = datasets;
     }
     
     async function compareDatasets() {
-        if (selectedDatasets.length < 2) {
-            showError('Please select at least 2 datasets to compare');
+        const dataset1Id = dataset1Select.value;
+        const dataset2Id = dataset2Select.value;
+        
+        if (!dataset1Id || !dataset2Id) {
+            showError('Please select both datasets to compare');
             return;
         }
         
         showLoading();
         
         try {
-            const comparison = performDatasetComparison(selectedDatasets);
+            const comparison = await performDatasetComparison([dataset1Id, dataset2Id]);
             displayDatasetComparison(comparison);
             
         } catch (error) {
@@ -427,20 +479,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     async function compareColumns() {
-        const dataset1 = document.getElementById('column-dataset-1').value;
-        const dataset2 = document.getElementById('column-dataset-2').value;
-        const column1 = document.getElementById('column-select-1').value;
-        const column2 = document.getElementById('column-select-2').value;
+        const datasetId = colDatasetSelect.value;
+        const column1 = document.getElementById('column1-select').value;
+        const column2 = document.getElementById('column2-select').value;
         
-        if (!dataset1 || !dataset2 || !column1 || !column2) {
-            showError('Please select datasets and columns for comparison');
+        if (!datasetId || !column1 || !column2) {
+            showError('Please select dataset and both columns for comparison');
             return;
         }
         
         showLoading();
         
         try {
-            const comparison = performColumnComparison(dataset1, column1, dataset2, column2);
+            const comparison = performColumnComparison(datasetId, column1, datasetId, column2);
             displayColumnComparison(comparison);
             
         } catch (error) {

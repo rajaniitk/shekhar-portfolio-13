@@ -17,16 +17,31 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSavedReports();
     
     function setupEventListeners() {
-        refreshButton.addEventListener('click', loadDatasets);
-        datasetSelect.addEventListener('change', handleDatasetSelection);
+        if (refreshButton) {
+            refreshButton.addEventListener('click', loadDatasets);
+        }
+        if (datasetSelect) {
+            datasetSelect.addEventListener('change', handleDatasetSelection);
+        }
         
-        // Report generation buttons
-        document.getElementById('generate-summary-report').addEventListener('click', generateSummaryReport);
-        document.getElementById('generate-statistical-report').addEventListener('click', generateStatisticalReport);
-        document.getElementById('generate-visualization-report').addEventListener('click', generateVisualizationReport);
-        document.getElementById('generate-quality-report').addEventListener('click', generateQualityReport);
-        document.getElementById('generate-comparative-report').addEventListener('click', generateComparativeReport);
-        document.getElementById('generate-custom-report').addEventListener('click', generateCustomReport);
+        // Report generation buttons with null checks
+        const summaryBtn = document.getElementById('generate-summary-report');
+        if (summaryBtn) summaryBtn.addEventListener('click', generateSummaryReport);
+        
+        const statBtn = document.getElementById('generate-statistical-report');
+        if (statBtn) statBtn.addEventListener('click', generateStatisticalReport);
+        
+        const vizBtn = document.getElementById('generate-visualization-report');
+        if (vizBtn) vizBtn.addEventListener('click', generateVisualizationReport);
+        
+        const qualityBtn = document.getElementById('generate-quality-report');
+        if (qualityBtn) qualityBtn.addEventListener('click', generateQualityReport);
+        
+        const compBtn = document.getElementById('generate-comparative-report');
+        if (compBtn) compBtn.addEventListener('click', generateComparativeReport);
+        
+        const customBtn = document.getElementById('generate-custom-report');
+        if (customBtn) customBtn.addEventListener('click', generateCustomReport);
         
         // Report actions
         document.getElementById('preview-report').addEventListener('click', previewReport);
