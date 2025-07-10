@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import os
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -21,6 +22,126 @@ import base64
 class VisualizationEngine:
     def __init__(self):
         self.data_processor = DataProcessor()
+        
+    def generate_chart_data(self, file_path, chart_type, x_column, y_column=None, color_column=None):
+        """Generic method to generate chart data based on chart type"""
+        try:
+            # Parse dataset
+            filename = os.path.basename(file_path)
+            df = self.data_processor.parse_file(file_path, filename)
+            if df is None:
+                return {'success': False, 'error': 'Failed to load dataset'}
+            
+            # Validate columns exist
+            if x_column not in df.columns:
+                return {'success': False, 'error': f'Column {x_column} not found'}
+            
+            if y_column and y_column not in df.columns:
+                return {'success': False, 'error': f'Column {y_column} not found'}
+            
+            if color_column and color_column not in df.columns:
+                return {'success': False, 'error': f'Column {color_column} not found'}
+            
+            # Generate chart based on type
+            if chart_type == 'histogram':
+                if not pd.api.types.is_numeric_dtype(df[x_column]):
+                    return {'success': False, 'error': f'Column {x_column} must be numeric for histogram'}
+                
+                fig = px.histogram(
+                    df, x=x_column,
+                    title=f'Histogram of {x_column}',
+                    template='plotly_dark'
+                )
+                
+            elif chart_type == 'scatter':
+                if not y_column:
+                    return {'success': False, 'error': 'Y column required for scatter plot'}
+                
+                fig = px.scatter(
+                    df, x=x_column, y=y_column, color=color_column,
+                    title=f'Scatter: {x_column} vs {y_column}',
+                    template='plotly_dark'
+                )
+                
+            elif chart_type == 'line':
+                if not y_column:
+                    return {'success': False, 'error': 'Y column required for line plot'}
+                
+                fig = px.line(
+                    df, x=x_column, y=y_column, color=color_column,
+                    title=f'Line: {y_column} over {x_column}',
+                    template='plotly_dark'
+                )
+                
+            elif chart_type == 'bar':
+                if y_column:
+                    # Grouped bar chart
+                    fig = px.bar(
+                        df, x=x_column, y=y_column, color=color_column,
+                        title=f'Bar Chart: {y_column} by {x_column}',
+                        template='plotly_dark'
+                    )
+                else:
+                    # Count bar chart
+                    counts = df[x_column].value_counts().reset_index()
+                    counts.columns = [x_column, 'count']
+                    fig = px.bar(
+                        counts, x=x_column, y='count',
+                        title=f'Bar Chart: Count of {x_column}',
+                        template='plotly_dark'
+                    )
+                    
+            elif chart_type == 'pie':
+                counts = df[x_column].value_counts()
+                # Limit to top 10
+                if len(counts) > 10:
+                    top_counts = counts.head(10)
+                    other_count = counts.tail(len(counts) - 10).sum()
+                    if other_count > 0:
+                        top_counts['Others'] = other_count
+                    counts = top_counts
+                
+                fig = px.pie(
+                    values=counts.values, names=counts.index,
+                    title=f'Pie Chart: {x_column}',
+                    template='plotly_dark'
+                )
+                
+            elif chart_type == 'box':
+                if y_column:
+                    fig = px.box(
+                        df, x=x_column, y=y_column, color=color_column,
+                        title=f'Box Plot: {y_column} by {x_column}',
+                        template='plotly_dark'
+                    )
+                else:
+                    fig = px.box(
+                        df, y=x_column,
+                        title=f'Box Plot: {x_column}',
+                        template='plotly_dark'
+                    )
+                    
+            else:
+                return {'success': False, 'error': f'Unsupported chart type: {chart_type}'}
+            
+            # Apply dark theme
+            fig.update_layout(self.dark_template['layout'])
+            
+            return {
+                'success': True,
+                'plot_json': fig.to_json(),
+                'plot_html': fig.to_html(include_plotlyjs=True),
+                'chart_type': chart_type,
+                'columns_used': {
+                    'x': x_column,
+                    'y': y_column,
+                    'color': color_column
+                }
+            }
+            
+        except Exception as e:
+            current_app.logger.error(f"Generate chart data error: {str(e)}")
+            return {'success': False, 'error': str(e)}
         
         # Dark theme template for plotly
         self.dark_template = {

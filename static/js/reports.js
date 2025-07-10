@@ -5,11 +5,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let generatedReports = [];
     
     // DOM Elements
-    const datasetSelect = document.getElementById('report-dataset-select');
-    const refreshButton = document.getElementById('refresh-report-datasets');
-    const reportSections = document.getElementById('report-sections');
+    const datasetSelect = document.getElementById('reports-dataset-select');
+    const refreshButton = document.getElementById('refresh-reports-datasets');
+    const reportGenerator = document.getElementById('report-generator');
     const reportPreview = document.getElementById('report-preview');
-    const loadingModal = document.getElementById('report-loading-modal');
+    const loadingModal = document.getElementById('reports-loading-modal');
     
     // Initialize
     loadDatasets();
@@ -44,12 +44,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (customBtn) customBtn.addEventListener('click', generateCustomReport);
         
         // Report actions
-        document.getElementById('preview-report').addEventListener('click', previewReport);
-        document.getElementById('download-pdf').addEventListener('click', downloadPDF);
-        document.getElementById('download-html').addEventListener('click', downloadHTML);
-        document.getElementById('download-json').addEventListener('click', downloadJSON);
-        document.getElementById('share-report').addEventListener('click', shareReport);
-        document.getElementById('save-template').addEventListener('click', saveTemplate);
+        const previewBtn = document.getElementById('preview-report');
+        if (previewBtn) previewBtn.addEventListener('click', previewReport);
+        
+        const downloadBtn = document.getElementById('download-report');
+        if (downloadBtn) downloadBtn.addEventListener('click', downloadReport);
+        
+        const shareBtn = document.getElementById('share-report');
+        if (shareBtn) shareBtn.addEventListener('click', shareReport);
+        
+        const editBtn = document.getElementById('edit-report');
+        if (editBtn) editBtn.addEventListener('click', editReport);
         
         // Custom report controls
         document.getElementById('add-section').addEventListener('click', addCustomSection);
@@ -110,34 +115,92 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedId = datasetSelect.value;
         
         if (!selectedId) {
-            reportSections.style.display = 'none';
+            if (reportGenerator) reportGenerator.style.display = 'none';
             return;
         }
         
         currentDatasetId = selectedId;
-        reportSections.style.display = 'block';
+        if (reportGenerator) reportGenerator.style.display = 'block';
         initializeReportSections();
     }
     
-         function initializeReportSections() {
-         // Reset section toggles
-         reportSectionSettings = {
-             overview: true,
-             statistics: true,
-             visualizations: false,
-             quality: true,
-             insights: false,
-             recommendations: true
-         };
-         
-         // Update toggle states
-         Object.entries(reportSectionSettings).forEach(([section, enabled]) => {
-             const toggle = document.querySelector(`[data-section="${section}"]`);
-             if (toggle) toggle.checked = enabled;
-         });
-         
-         updateReportPreview();
-     }
+    function initializeReportSections() {
+        // Reset section toggles
+        reportSectionSettings = {
+            summary: true,
+            statistics: true,
+            correlation: false,
+            missing: false,
+            distributions: false,
+            outliers: false,
+            visualizations: false,
+            recommendations: true
+        };
+        
+        // Update toggle states
+        Object.entries(reportSectionSettings).forEach(([section, enabled]) => {
+            const toggle = document.getElementById(`include-${section}`);
+            if (toggle) toggle.checked = enabled;
+        });
+        
+        updateReportPreview();
+    }
+    
+    function previewReport() {
+        if (!currentDatasetId) {
+            showError('Please select a dataset first');
+            return;
+        }
+        
+        const reportType = document.getElementById('report-type').value;
+        const reportTitle = document.getElementById('report-title').value || 'Data Analysis Report';
+        
+        showLoading();
+        
+        try {
+            generateSummaryReport().then(report => {
+                displayReportPreview(report);
+                if (reportPreview) reportPreview.style.display = 'block';
+            });
+        } catch (error) {
+            console.error('Error previewing report:', error);
+            showError('Failed to preview report');
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    function downloadReport() {
+        const reportFormat = document.getElementById('report-format').value;
+        
+        if (!generatedReports || generatedReports.length === 0) {
+            showError('No report to download. Please generate a report first.');
+            return;
+        }
+        
+        const report = generatedReports[generatedReports.length - 1];
+        
+        if (reportFormat === 'html') {
+            downloadHTML(report);
+        } else if (reportFormat === 'json') {
+            downloadJSON(report);
+        } else {
+            showError('PDF download not implemented yet');
+        }
+    }
+    
+    function editReport() {
+        if (reportPreview) reportPreview.style.display = 'none';
+        if (reportGenerator) reportGenerator.style.display = 'block';
+    }
+    
+    function addCustomSection() {
+        console.log('Add custom section functionality not implemented yet');
+    }
+    
+    function clearCustomSections() {
+        console.log('Clear custom sections functionality not implemented yet');
+    }
     
     async function generateSummaryReport() {
         if (!currentDatasetId) {

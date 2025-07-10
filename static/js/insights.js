@@ -11,7 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // DOM Elements
     const datasetSelect = document.getElementById('insights-dataset-select');
     const refreshButton = document.getElementById('refresh-insights-datasets');
-    const insightsContainer = document.getElementById('insights-container');
+    const insightsContainer = document.getElementById('insights-controls');
+    const insightsResults = document.getElementById('insights-results');
     const loadingModal = document.getElementById('insights-loading-modal');
     
     // Initialize
@@ -114,12 +115,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedId = datasetSelect.value;
         
         if (!selectedId) {
-            insightsContainer.style.display = 'none';
+            if (insightsContainer) insightsContainer.style.display = 'none';
+            if (insightsResults) insightsResults.style.display = 'none';
             return;
         }
         
         currentDatasetId = selectedId;
-        insightsContainer.style.display = 'block';
+        if (insightsContainer) insightsContainer.style.display = 'block';
         
         // Auto-generate basic insights
         await generateAllInsights();

@@ -53,29 +53,35 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function loadDatasets() {
         try {
-            const datasets = getStoredDatasets();
+            showLoading();
+            
+            // Fetch real datasets from the API
+            const response = await fetch('/api/data/datasets');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
             
             datasetSelect.innerHTML = '<option value="">Choose a dataset...</option>';
             
-            datasets.forEach(dataset => {
-                const option = document.createElement('option');
-                option.value = dataset.id;
-                option.textContent = dataset.name;
-                datasetSelect.appendChild(option);
-            });
+            if (data.success && data.datasets) {
+                data.datasets.forEach(dataset => {
+                    const option = document.createElement('option');
+                    option.value = dataset.id;
+                    option.textContent = `${dataset.name} (${dataset.rows} rows, ${dataset.columns} cols)`;
+                    datasetSelect.appendChild(option);
+                });
+            } else {
+                console.log('No datasets available');
+            }
             
         } catch (error) {
             console.error('Error loading datasets:', error);
-            showError('Failed to load datasets');
+            showError('Failed to load datasets: ' + error.message);
+        } finally {
+            hideLoading();
         }
-    }
-    
-    function getStoredDatasets() {
-        return [
-            { id: 1, name: 'Sample Dataset 1', rows: 1000, columns: 15 },
-            { id: 2, name: 'Customer Data', rows: 5000, columns: 8 },
-            { id: 3, name: 'Sales Records', rows: 2500, columns: 12 }
-        ];
     }
     
     async function handleDatasetSelection() {
@@ -96,27 +102,27 @@ document.addEventListener('DOMContentLoaded', function() {
         showLoading();
         
         try {
-            const columns = getMockColumns();
-            currentColumns = columns;
-            populateColumnSelect(columns);
+            // Fetch real columns from API
+            const response = await fetch(`/api/data/columns/${datasetId}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.columns) {
+                currentColumns = data.columns;
+                populateColumnSelect(data.columns);
+            } else {
+                throw new Error(data.error || 'Failed to load columns');
+            }
             
         } catch (error) {
             console.error('Error loading columns:', error);
-            showError('Failed to load dataset columns');
+            showError('Failed to load dataset columns: ' + error.message);
         } finally {
             hideLoading();
         }
-    }
-    
-    function getMockColumns() {
-        return [
-            { name: 'age', type: 'int64', is_numeric: true, unique_count: 50, null_count: 10 },
-            { name: 'income', type: 'float64', is_numeric: true, unique_count: 1000, null_count: 25 },
-            { name: 'score', type: 'float64', is_numeric: true, unique_count: 100, null_count: 5 },
-            { name: 'city', type: 'object', is_numeric: false, unique_count: 10, null_count: 0 },
-            { name: 'category', type: 'object', is_numeric: false, unique_count: 5, null_count: 3 },
-            { name: 'active', type: 'bool', is_numeric: false, unique_count: 2, null_count: 0 }
-        ];
     }
     
     function populateColumnSelect(columns) {

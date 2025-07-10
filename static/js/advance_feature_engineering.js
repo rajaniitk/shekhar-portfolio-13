@@ -5,10 +5,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let engineeredFeatures = [];
     
     // DOM Elements
-    const datasetSelect = document.getElementById('afe-dataset-select');
-    const refreshButton = document.getElementById('refresh-afe-datasets');
-    const engineeringSections = document.getElementById('engineering-sections');
-    const loadingModal = document.getElementById('afe-loading-modal');
+    const datasetSelect = document.getElementById('adv-fe-dataset-select');
+    const refreshButton = document.getElementById('refresh-adv-fe-datasets');
+    const engineeringSections = document.getElementById('fe-workspace');
+    const loadingModal = document.getElementById('adv-fe-loading-modal');
     
     // Initialize
     loadDatasets();

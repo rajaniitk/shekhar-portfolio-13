@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import os
 from scipy import stats
 from scipy.stats import chi2_contingency, fisher_exact
 from statsmodels.stats.contingency_tables import mcnemar
@@ -18,6 +19,126 @@ import json
 class StatisticalTests:
     def __init__(self):
         self.data_processor = DataProcessor()
+    
+    def get_descriptive_statistics(self, file_path, columns=None):
+        """Get descriptive statistics for specified columns"""
+        try:
+            filename = os.path.basename(file_path)
+            df = self.data_processor.parse_file(file_path, filename)
+            if df is None:
+                return {'success': False, 'error': 'Failed to load dataset'}
+            
+            if columns:
+                # Filter to requested columns
+                available_cols = [col for col in columns if col in df.columns]
+                if not available_cols:
+                    return {'success': False, 'error': 'None of the requested columns found'}
+                df = df[available_cols]
+            
+            # Get basic statistics
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
+            categorical_cols = df.select_dtypes(include=['object']).columns
+            
+            results = {}
+            
+            if len(numeric_cols) > 0:
+                results['numeric'] = df[numeric_cols].describe().to_dict()
+                
+            if len(categorical_cols) > 0:
+                results['categorical'] = {}
+                for col in categorical_cols:
+                    results['categorical'][col] = {
+                        'count': int(df[col].count()),
+                        'unique': int(df[col].nunique()),
+                        'top': df[col].mode().iloc[0] if not df[col].mode().empty else None,
+                        'freq': int(df[col].value_counts().iloc[0]) if not df[col].value_counts().empty else 0
+                    }
+            
+            return {'success': True, 'statistics': results}
+            
+        except Exception as e:
+            current_app.logger.error(f"Descriptive statistics error: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def test_normality(self, file_path, column, test_type='shapiro'):
+        """Test normality of a column"""
+        try:
+            filename = os.path.basename(file_path)
+            df = self.data_processor.parse_file(file_path, filename)
+            if df is None:
+                return {'success': False, 'error': 'Failed to load dataset'}
+                
+            if column not in df.columns:
+                return {'success': False, 'error': f'Column {column} not found'}
+            
+            data = df[column].dropna()
+            
+            if len(data) < 3:
+                return {'success': False, 'error': 'Insufficient data for normality test'}
+            
+            results = {'test_type': test_type, 'column': column}
+            
+            if test_type == 'shapiro':
+                if len(data) > 5000:
+                    data = data.sample(5000)  # Limit for Shapiro-Wilk
+                
+                statistic, p_value = stats.shapiro(data)
+                results.update({
+                    'test_name': 'Shapiro-Wilk test',
+                    'test_statistic': float(statistic),
+                    'p_value': float(p_value),
+                    'sample_size': len(data),
+                    'is_normal': p_value > 0.05,
+                    'interpretation': 'Normal distribution' if p_value > 0.05 else 'Not normally distributed'
+                })
+                
+            return {'success': True, 'result': results}
+            
+        except Exception as e:
+            current_app.logger.error(f"Normality test error: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def correlation_test(self, file_path, column1, column2, method='pearson'):
+        """Test correlation between two columns"""
+        try:
+            filename = os.path.basename(file_path)
+            df = self.data_processor.parse_file(file_path, filename)
+            if df is None:
+                return {'success': False, 'error': 'Failed to load dataset'}
+            
+            if column1 not in df.columns or column2 not in df.columns:
+                return {'success': False, 'error': 'Required columns not found'}
+            
+            # Remove missing values
+            clean_data = df[[column1, column2]].dropna()
+            
+            if len(clean_data) < 3:
+                return {'success': False, 'error': 'Insufficient data for correlation test'}
+            
+            x, y = clean_data[column1], clean_data[column2]
+            
+            if method == 'pearson':
+                correlation, p_value = stats.pearsonr(x, y)
+            elif method == 'spearman':
+                correlation, p_value = stats.spearmanr(x, y)
+            else:
+                return {'success': False, 'error': f'Unknown correlation method: {method}'}
+            
+            results = {
+                'method': method,
+                'column1': column1,
+                'column2': column2,
+                'correlation_coefficient': float(correlation),
+                'p_value': float(p_value),
+                'sample_size': len(clean_data),
+                'is_significant': p_value < 0.05
+            }
+            
+            return {'success': True, 'result': results}
+            
+        except Exception as e:
+            current_app.logger.error(f"Correlation test error: {str(e)}")
+            return {'success': False, 'error': str(e)}
         
         # Define available tests and their requirements
         self.test_catalog = {

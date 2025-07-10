@@ -167,7 +167,10 @@ def anova_test():
         dataset = Dataset.query.get_or_404(dataset_id)
         service = StatisticalTests()
         
-        result = service.anova_test(dataset.file_path, dependent, independent, anova_type)
+        if anova_type == 'one_way':
+            result = service.anova(dataset_id, dependent, independent[0] if independent else None, 'one_way')
+        else:
+            return jsonify({'success': False, 'error': f'ANOVA type {anova_type} not implemented'}), 400
         
         return jsonify({
             'success': True,
@@ -193,7 +196,7 @@ def chi_square_test():
         dataset = Dataset.query.get_or_404(dataset_id)
         service = StatisticalTests()
         
-        result = service.chi_square_test(dataset.file_path, var1, var2, test_type)
+        result = service.chi_square(dataset_id, var1, var2, test_type)
         
         return jsonify({
             'success': True,
