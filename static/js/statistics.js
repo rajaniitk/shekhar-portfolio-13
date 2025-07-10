@@ -1,0 +1,695 @@
+document.addEventListener('DOMContentLoaded', function() {
+    // Global variables
+    let currentDatasetId = null;
+    let currentColumns = [];
+    
+    // DOM Elements
+    const datasetSelect = document.getElementById('stats-dataset-select');
+    const refreshButton = document.getElementById('refresh-stats-datasets');
+    const statsSections = document.getElementById('stats-sections');
+    const loadingModal = document.getElementById('stats-loading-modal');
+    
+    // Initialize
+    loadDatasets();
+    setupEventListeners();
+    
+    // Event listeners
+    function setupEventListeners() {
+        refreshButton.addEventListener('click', loadDatasets);
+        datasetSelect.addEventListener('change', handleDatasetSelection);
+        
+        // Descriptive statistics
+        document.getElementById('generate-descriptive').addEventListener('click', generateDescriptiveStats);
+        
+        // Normality tests
+        document.getElementById('run-normality').addEventListener('click', runNormalityTest);
+        
+        // Correlation tests
+        document.getElementById('run-correlation').addEventListener('click', runCorrelationTest);
+        
+        // T-tests
+        document.getElementById('ttest-type').addEventListener('change', handleTTestTypeChange);
+        document.getElementById('run-ttest').addEventListener('click', runTTest);
+        
+        // ANOVA
+        document.getElementById('run-anova').addEventListener('click', runANOVA);
+        
+        // Chi-square tests
+        document.getElementById('chi-test-type').addEventListener('change', handleChiTestTypeChange);
+        document.getElementById('run-chi-square').addEventListener('click', runChiSquareTest);
+    }
+    
+    // Functions
+    async function loadDatasets() {
+        try {
+            showLoading('Loading datasets...');
+            
+            // Fetch real datasets from the API
+            const response = await fetch('/api/data/datasets');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            datasetSelect.innerHTML = '<option value="">Choose a dataset...</option>';
+            
+            if (data.success && data.datasets) {
+                data.datasets.forEach(dataset => {
+                    const option = document.createElement('option');
+                    option.value = dataset.id;
+                    option.textContent = `${dataset.filename} (${dataset.rows} rows, ${dataset.columns} cols)`;
+                    datasetSelect.appendChild(option);
+                });
+            } else {
+                showError('No datasets found. Please upload a dataset first.');
+            }
+            
+        } catch (error) {
+            console.error('Error loading datasets:', error);
+            showError('Failed to load datasets. Please check your connection.');
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    async function handleDatasetSelection() {
+        const selectedId = datasetSelect.value;
+        
+        if (!selectedId) {
+            statsSections.style.display = 'none';
+            return;
+        }
+        
+        currentDatasetId = selectedId;
+        await loadDatasetColumns(selectedId);
+        statsSections.style.display = 'block';
+    }
+    
+    async function loadDatasetColumns(datasetId) {
+        showLoading('Loading dataset columns...');
+        
+        try {
+            // Fetch real columns from the API
+            const response = await fetch(`/api/data/columns/${datasetId}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.columns) {
+                currentColumns = data.columns;
+                populateColumnSelects(data.columns);
+            } else {
+                throw new Error(data.error || 'Failed to load columns');
+            }
+            
+        } catch (error) {
+            console.error('Error loading columns:', error);
+            showError('Failed to load dataset columns: ' + error.message);
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    function populateColumnSelects(columns) {
+        // Get all select elements that need column population
+        const selects = [
+            'desc-columns', 'normality-column', 'corr-column1', 'corr-column2',
+            'ttest-column', 'ttest-column1', 'ttest-column2', 'ttest-before', 'ttest-after',
+            'anova-dependent', 'anova-independent', 'chi-var1', 'chi-var2', 'chi-observed'
+        ];
+        
+        selects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            if (select) {
+                const isMultiple = select.hasAttribute('multiple');
+                const placeholder = selectId.includes('desc') ? 'Select columns...' : 'Choose column...';
+                
+                if (!isMultiple) {
+                    select.innerHTML = `<option value="">${placeholder}</option>`;
+                } else {
+                    select.innerHTML = '';
+                }
+                
+                columns.forEach(column => {
+                    // Filter columns based on select type
+                    let shouldInclude = true;
+                    
+                    if (selectId.includes('normality') || selectId.includes('corr') || 
+                        selectId.includes('ttest') || selectId.includes('anova-dependent')) {
+                        shouldInclude = column.is_numeric;
+                    }
+                    
+                    if (shouldInclude) {
+                        const option = document.createElement('option');
+                        option.value = column.name;
+                        option.textContent = `${column.name} (${column.dtype})`;
+                        select.appendChild(option);
+                    }
+                });
+            }
+        });
+    }
+    
+    async function generateDescriptiveStats() {
+        const selectedColumns = Array.from(document.getElementById('desc-columns').selectedOptions)
+            .map(option => option.value);
+        
+        if (selectedColumns.length === 0) {
+            showError('Please select at least one column');
+            return;
+        }
+        
+        showLoading('Generating descriptive statistics...');
+        
+        try {
+            // Fetch real descriptive statistics from API
+            const response = await fetch('/api/statistical/descriptive', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    dataset_id: currentDatasetId,
+                    columns: selectedColumns
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.statistics) {
+                displayDescriptiveStats(data.statistics);
+            } else {
+                throw new Error(data.error || 'Failed to generate descriptive statistics');
+            }
+            
+        } catch (error) {
+            console.error('Error generating descriptive statistics:', error);
+            showError('Failed to generate descriptive statistics: ' + error.message);
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    function displayDescriptiveStats(stats) {
+        const container = document.getElementById('descriptive-results');
+        
+        let html = '<div class="stats-table-container">';
+        html += '<table class="stats-table">';
+        html += '<thead><tr><th>Statistic</th>';
+        
+        Object.keys(stats).forEach(column => {
+            html += `<th>${column}</th>`;
+        });
+        
+        html += '</tr></thead><tbody>';
+        
+        const statNames = ['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max'];
+        
+        statNames.forEach(stat => {
+            html += `<tr><td><strong>${stat}</strong></td>`;
+            Object.values(stats).forEach(columnStats => {
+                const value = columnStats[stat];
+                if (value !== undefined && value !== null) {
+                    const displayValue = stat === 'count' ? value : parseFloat(value).toFixed(3);
+                    html += `<td>${displayValue}</td>`;
+                } else {
+                    html += `<td>N/A</td>`;
+                }
+            });
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+    }
+    
+    async function runNormalityTest() {
+        const column = document.getElementById('normality-column').value;
+        const testType = document.getElementById('normality-test').value;
+        
+        if (!column) {
+            showError('Please select a column');
+            return;
+        }
+        
+        showLoading('Running normality test...');
+        
+        try {
+            // Run real normality test via API
+            const response = await fetch('/api/statistical/normality', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    dataset_id: currentDatasetId,
+                    column: column,
+                    test_type: testType
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.result) {
+                displayNormalityResult(data.result, column, testType);
+            } else {
+                throw new Error(data.error || 'Failed to run normality test');
+            }
+            
+        } catch (error) {
+            console.error('Error running normality test:', error);
+            showError('Failed to run normality test: ' + error.message);
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    function displayNormalityResult(result, column, testType) {
+        const container = document.getElementById('normality-results');
+        
+        const isNormal = result.p_value >= 0.05;
+        const conclusion = isNormal ? 
+            'The data appears to be normally distributed' : 
+            'The data does not appear to be normally distributed';
+        
+        const html = `
+            <div class="test-result ${isNormal ? 'normal' : 'not-normal'}">
+                <h4>${testType.replace('_', ' ').toUpperCase()} Test Results for "${column}"</h4>
+                <div class="result-stats">
+                    <div class="stat-item">
+                        <strong>Test Statistic:</strong> ${result.statistic.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>P-value:</strong> ${result.p_value.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Significance Level:</strong> 0.05
+                    </div>
+                </div>
+                <div class="conclusion">
+                    <strong>Conclusion:</strong> ${conclusion}
+                    ${result.p_value < 0.05 ? 
+                        ' (p < α, reject null hypothesis)' : 
+                        ' (p ≥ α, fail to reject null hypothesis)'}
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+    
+    async function runCorrelationTest() {
+        const column1 = document.getElementById('corr-column1').value;
+        const column2 = document.getElementById('corr-column2').value;
+        const method = document.getElementById('correlation-method').value;
+        
+        if (!column1 || !column2) {
+            showError('Please select both columns');
+            return;
+        }
+        
+        if (column1 === column2) {
+            showError('Please select different columns');
+            return;
+        }
+        
+        showLoading('Running correlation test...');
+        
+        try {
+            // Run real correlation test via API
+            const response = await fetch('/api/statistical/correlation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    dataset_id: currentDatasetId,
+                    column1: column1,
+                    column2: column2,
+                    method: method
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.result) {
+                displayCorrelationResult(data.result, column1, column2, method);
+            } else {
+                throw new Error(data.error || 'Failed to run correlation test');
+            }
+            
+        } catch (error) {
+            console.error('Error running correlation test:', error);
+            showError('Failed to run correlation test: ' + error.message);
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    function displayCorrelationResult(result, column1, column2, method) {
+        const container = document.getElementById('correlation-results');
+        
+        const strength = Math.abs(result.correlation);
+        let strengthText = 'weak';
+        if (strength > 0.7) strengthText = 'strong';
+        else if (strength > 0.3) strengthText = 'moderate';
+        
+        const direction = result.correlation > 0 ? 'positive' : 'negative';
+        
+        const html = `
+            <div class="test-result correlation">
+                <h4>${method.toUpperCase()} Correlation: "${column1}" vs "${column2}"</h4>
+                <div class="result-stats">
+                    <div class="stat-item">
+                        <strong>Correlation Coefficient:</strong> ${result.correlation.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>P-value:</strong> ${result.p_value ? result.p_value.toFixed(4) : 'N/A'}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Sample Size:</strong> ${result.sample_size || 'N/A'}
+                    </div>
+                </div>
+                <div class="conclusion">
+                    <strong>Interpretation:</strong> There is a ${strengthText} ${direction} correlation between ${column1} and ${column2}.
+                    ${result.p_value && result.p_value < 0.05 ? 
+                        ' The correlation is statistically significant.' : 
+                        ' The correlation is not statistically significant.'}
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+    
+    function handleTTestTypeChange() {
+        const testType = document.getElementById('ttest-type').value;
+        
+        // Hide all config sections
+        document.querySelectorAll('.ttest-config').forEach(section => {
+            section.style.display = 'none';
+        });
+        
+        // Show relevant section
+        const sectionMap = {
+            'one_sample': 'ttest-one-sample',
+            'independent': 'ttest-independent', 
+            'paired': 'ttest-paired'
+        };
+        
+        const sectionId = sectionMap[testType];
+        if (sectionId) {
+            document.getElementById(sectionId).style.display = 'block';
+        }
+    }
+    
+    async function runTTest() {
+        const testType = document.getElementById('ttest-type').value;
+        const alpha = parseFloat(document.getElementById('alpha-level').value);
+        
+        // Get test-specific parameters
+        let requestData = {
+            dataset_id: currentDatasetId,
+            test_type: testType,
+            alpha: alpha
+        };
+        
+        if (testType === 'one_sample') {
+            requestData.column = document.getElementById('ttest-column').value;
+            requestData.population_mean = parseFloat(document.getElementById('population-mean').value);
+        } else if (testType === 'independent') {
+            requestData.column1 = document.getElementById('ttest-column1').value;
+            requestData.column2 = document.getElementById('ttest-column2').value;
+        } else if (testType === 'paired') {
+            requestData.before_column = document.getElementById('ttest-before').value;
+            requestData.after_column = document.getElementById('ttest-after').value;
+        }
+        
+        showLoading('Running T-test...');
+        
+        try {
+            // Run real T-test via API
+            const response = await fetch('/api/statistical/ttest', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.result) {
+                displayTTestResult(data.result, testType, alpha);
+            } else {
+                throw new Error(data.error || 'Failed to run T-test');
+            }
+            
+        } catch (error) {
+            console.error('Error running t-test:', error);
+            showError('Failed to run t-test: ' + error.message);
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    function displayTTestResult(result, testType, alpha) {
+        const container = document.getElementById('ttest-results');
+        
+        const isSignificant = result.p_value < alpha;
+        const testName = testType.replace('_', ' ').toUpperCase() + ' T-Test';
+        
+        const html = `
+            <div class="test-result ${isSignificant ? 'significant' : 'not-significant'}">
+                <h4>${testName} Results</h4>
+                <div class="result-stats">
+                    <div class="stat-item">
+                        <strong>T-statistic:</strong> ${result.statistic.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>P-value:</strong> ${result.p_value.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Degrees of Freedom:</strong> ${result.degrees_of_freedom || 'N/A'}
+                    </div>
+                    ${result.effect_size ? `
+                    <div class="stat-item">
+                        <strong>Effect Size:</strong> ${result.effect_size.toFixed(4)}
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="conclusion">
+                    <strong>Conclusion:</strong> 
+                    ${isSignificant ? 
+                        'The test is statistically significant. We reject the null hypothesis.' : 
+                        'The test is not statistically significant. We fail to reject the null hypothesis.'}
+                    (α = ${alpha})
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+    
+    function handleChiTestTypeChange() {
+        const testType = document.getElementById('chi-test-type').value;
+        
+        document.getElementById('chi-independence').style.display = 
+            testType === 'independence' ? 'block' : 'none';
+        document.getElementById('chi-goodness').style.display = 
+            testType === 'goodness_of_fit' ? 'block' : 'none';
+    }
+    
+    async function runANOVA() {
+        const dependent = document.getElementById('anova-dependent').value;
+        const independent = Array.from(document.getElementById('anova-independent').selectedOptions)
+            .map(option => option.value);
+        const anovaType = document.getElementById('anova-type').value;
+        
+        if (!dependent || independent.length === 0) {
+            showError('Please select dependent and independent variables');
+            return;
+        }
+        
+        showLoading('Running ANOVA...');
+        
+        try {
+            // Run real ANOVA via API
+            const response = await fetch('/api/statistical/anova', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    dataset_id: currentDatasetId,
+                    dependent: dependent,
+                    independent: independent,
+                    anova_type: anovaType
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.result) {
+                displayANOVAResult(data.result, dependent, independent, anovaType);
+            } else {
+                throw new Error(data.error || 'Failed to run ANOVA');
+            }
+            
+        } catch (error) {
+            console.error('Error running ANOVA:', error);
+            showError('Failed to run ANOVA: ' + error.message);
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    function displayANOVAResult(result, dependent, independent, anovaType) {
+        const container = document.getElementById('anova-results');
+        
+        const isSignificant = result.p_value < 0.05;
+        
+        const html = `
+            <div class="test-result ${isSignificant ? 'significant' : 'not-significant'}">
+                <h4>${anovaType.replace('_', '-').toUpperCase()} ANOVA Results</h4>
+                <p><strong>Dependent Variable:</strong> ${dependent}</p>
+                <p><strong>Independent Variables:</strong> ${independent.join(', ')}</p>
+                <div class="result-stats">
+                    <div class="stat-item">
+                        <strong>F-statistic:</strong> ${result.f_statistic.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>P-value:</strong> ${result.p_value.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Degrees of Freedom:</strong> ${result.degrees_of_freedom.join(', ')}
+                    </div>
+                </div>
+                <div class="conclusion">
+                    <strong>Conclusion:</strong> 
+                    ${isSignificant ? 
+                        'There is a statistically significant difference between groups.' : 
+                        'There is no statistically significant difference between groups.'}
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+    
+    async function runChiSquareTest() {
+        const testType = document.getElementById('chi-test-type').value;
+        
+        showLoading('Running chi-square test...');
+        
+        try {
+            // Run real chi-square test via API
+            const response = await fetch('/api/statistical/chi_square', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    dataset_id: currentDatasetId,
+                    test_type: testType,
+                    var1: document.getElementById('chi-var1').value,
+                    var2: document.getElementById('chi-var2').value,
+                    observed: document.getElementById('chi-observed').value
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.result) {
+                displayChiSquareResult(data.result, testType);
+            } else {
+                throw new Error(data.error || 'Failed to run chi-square test');
+            }
+            
+        } catch (error) {
+            console.error('Error running chi-square test:', error);
+            showError('Failed to run chi-square test: ' + error.message);
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    function displayChiSquareResult(result, testType) {
+        const container = document.getElementById('chi-square-results');
+        
+        const isSignificant = result.p_value < 0.05;
+        const testName = testType.replace('_', ' ').toUpperCase();
+        
+        const html = `
+            <div class="test-result ${isSignificant ? 'significant' : 'not-significant'}">
+                <h4>Chi-Square ${testName} Test Results</h4>
+                <div class="result-stats">
+                    <div class="stat-item">
+                        <strong>Chi-square statistic:</strong> ${result.chi2_statistic.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>P-value:</strong> ${result.p_value.toFixed(4)}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Degrees of Freedom:</strong> ${result.degrees_of_freedom}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Cramér's V:</strong> ${result.cramers_v.toFixed(4)}
+                    </div>
+                </div>
+                <div class="conclusion">
+                    <strong>Conclusion:</strong> 
+                    ${isSignificant ? 
+                        'There is a statistically significant association between the variables.' : 
+                        'There is no statistically significant association between the variables.'}
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+    
+    function showLoading(message = 'Loading...') {
+        loadingModal.querySelector('.modal-content').textContent = message;
+        loadingModal.style.display = 'flex';
+    }
+    
+    function hideLoading() {
+        loadingModal.style.display = 'none';
+    }
+    
+    function showError(message) {
+        alert(message); // In a real app, use a proper notification system
+    }
+    
+    // Initialize t-test and chi-square sections
+    handleTTestTypeChange();
+    handleChiTestTypeChange();
+});
