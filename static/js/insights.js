@@ -173,8 +173,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    async function getStoredDatasets() {
+        try {
+            const response = await fetch('/api/data/datasets');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.success ? data.datasets : [];
+        } catch (error) {
+            console.error('Error fetching datasets:', error);
+            return [];
+        }
+    }
+
     async function generateInsights(category) {
-        const dataset = getStoredDatasets().find(d => d.id == currentDatasetId);
+        const datasets = await getStoredDatasets();
+        const dataset = datasets.find(d => d.id == currentDatasetId);
         const insights = [];
         
         if (category === 'all' || category === 'statistical') {

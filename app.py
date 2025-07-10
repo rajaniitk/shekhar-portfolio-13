@@ -40,6 +40,7 @@ os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 db.init_app(app)
 
 # Import and register blueprints
+from routes.data_routes import data_bp
 from routes.data_processor_routes import data_processor_bp
 from routes.analysis_engine_routes import analysis_engine_bp
 from routes.feature_engineer_routes import feature_engineer_bp
@@ -52,6 +53,7 @@ from routes.visualization_engine_routes import visualization_engine_bp
 from routes.column_analysis_routes import column_analysis_bp
 from routes.comparison_routes import comparison_bp
 
+app.register_blueprint(data_bp)
 app.register_blueprint(data_processor_bp)
 app.register_blueprint(analysis_engine_bp)
 app.register_blueprint(feature_engineer_bp)

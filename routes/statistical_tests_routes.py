@@ -77,12 +77,18 @@ def normality_test():
         dataset = Dataset.query.get_or_404(dataset_id)
         service = StatisticalTests()
         
-        result = service.test_normality(dataset.file_path, column, test_type)
+        result = service.normality_test(dataset_id, column, test_type)
         
-        return jsonify({
-            'success': True,
-            'result': result
-        })
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'result': result['results']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            }), 500
         
     except Exception as e:
         logging.error(f"Normality test error: {str(e)}")
@@ -103,12 +109,18 @@ def correlation_test():
         dataset = Dataset.query.get_or_404(dataset_id)
         service = StatisticalTests()
         
-        result = service.correlation_test(dataset.file_path, column1, column2, method)
+        result = service.correlation_test(dataset_id, column1, column2, method)
         
-        return jsonify({
-            'success': True,
-            'result': result
-        })
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'result': result['results']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            }), 500
         
     except Exception as e:
         logging.error(f"Correlation test error: {str(e)}")
@@ -143,10 +155,16 @@ def t_test():
         else:
             return jsonify({'success': False, 'error': 'Invalid test type'}), 400
         
-        return jsonify({
-            'success': True,
-            'result': result
-        })
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'result': result['results']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            }), 500
         
     except Exception as e:
         logging.error(f"T-test error: {str(e)}")
@@ -172,10 +190,16 @@ def anova_test():
         else:
             return jsonify({'success': False, 'error': f'ANOVA type {anova_type} not implemented'}), 400
         
-        return jsonify({
-            'success': True,
-            'result': result
-        })
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'result': result['results']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            }), 500
         
     except Exception as e:
         logging.error(f"ANOVA test error: {str(e)}")
@@ -198,10 +222,16 @@ def chi_square_test():
         
         result = service.chi_square(dataset_id, var1, var2, test_type)
         
-        return jsonify({
-            'success': True,
-            'result': result
-        })
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'result': result['results']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            }), 500
         
     except Exception as e:
         logging.error(f"Chi-square test error: {str(e)}")

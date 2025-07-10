@@ -552,7 +552,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateFeaturesList() {
-        const container = document.getElementById('engineered-features-list');
+        const container = document.getElementById('pipeline-steps');
+        if (!container) {
+            console.error('Pipeline steps container not found');
+            return;
+        }
         
         if (engineeredFeatures.length === 0) {
             container.innerHTML = '<p>No engineered features yet. Use the techniques above to create new features.</p>';
